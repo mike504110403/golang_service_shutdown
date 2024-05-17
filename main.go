@@ -36,16 +36,25 @@ func main() {
 		}
 	}()
 
+	wg.Add(1)
+	go func() {
+		time.Sleep(10 * time.Second)
+		wg.Done()
+	}()
+
 	// 接收關服務訊號
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
-	srv.SetKeepAlivesEnabled(false)
+	// 關比接收新請求 -> 實際上 context.WithTimeout(context.Background(), 5*time.Second) 也會做掉
+	// srv.SetKeepAlivesEnabled(false)
 
 	log.Println("========== Shutdown Server ... ==========")
+	// 設定關閉服務上下文
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// 關閉服務
 	if err := srv.Shutdown(ctx); err != nil {
 		log.Fatal("========== Server Shutdown: ", err, " ==========")
 	}
